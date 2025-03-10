@@ -5,88 +5,71 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.focusModifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.myapplication.ui.theme.MyApplicationTheme
-import com.example.myapplication.ui.theme.color_boton
 import com.example.myapplication.ui.theme.color_letra
 import com.example.myapplication.ui.theme.fondo_teclado
-import com.example.myapplication.ui.theme.fondo_teclado
-import javax.sql.RowSetWriter
 
 data class BotonModelo(
     val id: String,
     var numero: String,
     var operacion_aritmetica: OperacionesAritmeticas = OperacionesAritmeticas.Ninguna,
     var operacion_a_mostrar: String = ""
-) {}
+)
 
-enum class EstadosCalculadora{
+enum class EstadosCalculadora {
     CuandoEstaEnCero,
     AgregandoNumeros,
     SeleccionadoOperacion,
     MostrandoResultado
 }
 
-enum class OperacionesAritmeticas{
-    Ninguna, // Esta es la opcion por default y sirve para hacer nada
-    Suma,
-    Resta,
-    Multiplicacion,
-    Division,
-    Resultado
+enum class OperacionesAritmeticas {
+    Ninguna, Suma, Resta, Multiplicacion, Division, Resultado
 }
 
-var hileras_de_botones_a_dibujar = arrayOf(
-    arrayOf(
-        BotonModelo("boton_9", "9", OperacionesAritmeticas.Multiplicacion, "*"),
+var hileras_de_botones_a_dibujar = listOf(
+    listOf(
+        BotonModelo("boton_9", "9"),
         BotonModelo("boton_8", "8"),
-        BotonModelo("boton_7", "7", OperacionesAritmeticas.Division, "/"),
+        BotonModelo("boton_7", "7", OperacionesAritmeticas.Division, "/")
     ),
-    arrayOf(
+    listOf(
         BotonModelo("boton_6", "6"),
-        BotonModelo("boton_5", "5", OperacionesAritmeticas.Resultado, "="),
-        BotonModelo("boton_4", "4"),
+        BotonModelo("boton_5", "5"),
+        BotonModelo("boton_4", "4")
     ),
-    arrayOf(
-        BotonModelo("boton_3", "3", OperacionesAritmeticas.Suma, "+"),
+    listOf(
+        BotonModelo("boton_3", "3"),
         BotonModelo("boton_2", "2"),
-        BotonModelo("boton_1", "1", OperacionesAritmeticas.Resta, "-"),
+        BotonModelo("boton_1", "1")
     ),
-    arrayOf(
-        BotonModelo("boton_punto", "."),
-        BotonModelo("boton_0", "0"),
-        BotonModelo("boton_operacion", "OP"),
+    listOf(
+        BotonModelo("boton_+", "+", OperacionesAritmeticas.Suma, "+"),
+        BotonModelo("boton_-", "0", OperacionesAritmeticas.Resta, "*"),
+        BotonModelo("boton_=", "-", OperacionesAritmeticas.Multiplicacion, "-")
+    ),
+    listOf(
+        BotonModelo("boton_+", "/", OperacionesAritmeticas.Division, "+"),
+        BotonModelo("boton_=", "*", OperacionesAritmeticas.Resultado, "=")
+    ),
+    listOf(
+        BotonModelo("boton_+", "C", OperacionesAritmeticas.Division, "+"),
+        BotonModelo("boton_=", "=", OperacionesAritmeticas.Resultado, "=")
     )
-
 )
 
 class MainActivity : ComponentActivity() {
@@ -107,148 +90,102 @@ fun Calculadora() {
     var numero_anterior = remember { mutableStateOf("0") }
     var estado_de_la_calculadora = remember { mutableStateOf(EstadosCalculadora.CuandoEstaEnCero) }
     var operacion_seleccionada = remember { mutableStateOf(OperacionesAritmeticas.Ninguna) }
+    val buttonSpacing = 8.dp
 
-    fun pulsar_boton(boton: BotonModelo){
-        Log.v("BOTONES_INTERFAZ", "Se ha pulsado el boton ${boton.id} de la interfaz")
-        Log.v("OPERACION_SELECCIONADA", "La operacion seleccionada es ${operacion_seleccionada.value}")
+    fun realizarOperacion(): String {
+        val num1 = numero_anterior.value.toDoubleOrNull() ?: 0.0
+        val num2 = pantalla_calculadora.value.toDoubleOrNull() ?: 0.0
+        return when (operacion_seleccionada.value) {
+            OperacionesAritmeticas.Suma -> (num1 + num2).toString()
+            OperacionesAritmeticas.Resta -> (num1 - num2).toString()
+            OperacionesAritmeticas.Multiplicacion -> (num1 * num2).toString()
+            OperacionesAritmeticas.Division -> if (num2 != 0.0) (num1 / num2).toString() else "Error"
+            else -> pantalla_calculadora.value
+        }
+    }
+    
+    fun pulsar_boton(boton: BotonModelo) {
+        Log.v("BOTONES_INTERFAZ", "Se ha pulsado el boton ${boton.id}")
 
-        when(estado_de_la_calculadora.value){
+        when (estado_de_la_calculadora.value) {
             EstadosCalculadora.CuandoEstaEnCero -> {
-                if(boton.id == "boton_0"){
-                    return
-                }
-                else if(boton.id == "boton_punto"){
-                    pantalla_calculadora.value = pantalla_calculadora.value + boton.numero
-                    return
-                }
-
-                pantalla_calculadora.value = boton.numero
+                pantalla_calculadora.value = if (boton.id == "boton_0") "0" else boton.numero
                 estado_de_la_calculadora.value = EstadosCalculadora.AgregandoNumeros
-
             }
 
             EstadosCalculadora.AgregandoNumeros -> {
-                if(boton.id == "boton_operacion"){
-                    estado_de_la_calculadora.value = EstadosCalculadora.SeleccionadoOperacion
-                    return
-                }
-
-                pantalla_calculadora.value = pantalla_calculadora.value + boton.numero
+                pantalla_calculadora.value += boton.numero
             }
 
             EstadosCalculadora.SeleccionadoOperacion -> {
-                if(     boton.operacion_aritmetica != OperacionesAritmeticas.Ninguna &&
+                if (boton.operacion_aritmetica != OperacionesAritmeticas.Ninguna &&
                     boton.operacion_aritmetica != OperacionesAritmeticas.Resultado
-                ){
+                ) {
                     operacion_seleccionada.value = boton.operacion_aritmetica
-                    estado_de_la_calculadora.value = EstadosCalculadora.CuandoEstaEnCero
-
                     numero_anterior.value = pantalla_calculadora.value
-
                     pantalla_calculadora.value = "0"
-                    return
                 }
-                // Aqui imprimimos el resultado
-                else if(boton.operacion_aritmetica == OperacionesAritmeticas.Resultado &&
-                    operacion_seleccionada.value != OperacionesAritmeticas.Ninguna){
-
-                    when(operacion_seleccionada.value){
-
-                        OperacionesAritmeticas.Suma -> {
-                            pantalla_calculadora.value = numero_anterior.value + "+" + pantalla_calculadora.value
-                        }
-                        OperacionesAritmeticas.Resta -> {
-                            pantalla_calculadora.value = numero_anterior.value + "-" + pantalla_calculadora.value
-                        }
-                        OperacionesAritmeticas.Multiplicacion -> {
-                            pantalla_calculadora.value = numero_anterior.value + "*" + pantalla_calculadora.value
-                        }
-                        OperacionesAritmeticas.Division -> {
-                            pantalla_calculadora.value = numero_anterior.value + "/" + pantalla_calculadora.value
-                        }
-
-                        else -> {}
-                    }
-
-
-                    estado_de_la_calculadora.value = EstadosCalculadora.MostrandoResultado
-                    return
-                }
-
-                estado_de_la_calculadora.value = EstadosCalculadora.AgregandoNumeros
             }
 
-
             EstadosCalculadora.MostrandoResultado -> {
-                numero_anterior.value  = ""
-
                 pantalla_calculadora.value = "0"
-
                 estado_de_la_calculadora.value = EstadosCalculadora.CuandoEstaEnCero
             }
         }
     }
 
-
-    Column(modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = "${pantalla_calculadora.value}", modifier = Modifier
-            .padding(10.dp)
-            .fillMaxWidth()
-            .fillMaxHeight(0.33f)
-            .background(color = Color.White)
-            .height(50.dp),
+    Column(
+        modifier = Modifier
+            .fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(buttonSpacing), // Esto es correcto
+        horizontalAlignment = Alignment.CenterHorizontally // Se reemplaza por una alineación válida
+    ) {
+        Text(
+            text = pantalla_calculadora.value,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.White)
+                .height(200.dp),
             textAlign = TextAlign.Right,
             color = color_letra,
             fontSize = 86.sp
         )
 
-        // Deberia jugar mas con el estilo de aqui
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .background(fondo_teclado)) {
-            for(fila_de_botones in hileras_de_botones_a_dibujar){
-                Row(horizontalArrangement = Arrangement.SpaceAround,
-                    modifier = Modifier.fillMaxWidth()) {
-                    for(boton_a_dibujar in fila_de_botones){
-                        when(estado_de_la_calculadora.value){
-                            EstadosCalculadora.SeleccionadoOperacion -> {
-                                Boton(boton_a_dibujar.operacion_a_mostrar, alPulsar = {
-                                    pulsar_boton(boton_a_dibujar)
-                                })
-                            }
-                            else -> {
-                                Boton(boton_a_dibujar.numero, alPulsar = {
-                                    pulsar_boton(boton_a_dibujar)
-                                })
-                            }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(fondo_teclado),
+            verticalArrangement = Arrangement.Top
+            ) {
+            hileras_de_botones_a_dibujar.forEach { fila_de_botones ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                    ) {
+                    fila_de_botones.forEach { boton_a_dibujar ->
+                        Boton(
+                            etiqueta = boton_a_dibujar.numero,
+                            modifier = Modifier
+                                .padding(8.dp)
+                                .weight(1f)
+                            )
+                        {
+                            pulsar_boton(boton_a_dibujar)
                         }
-
                     }
                 }
             }
         }
     }
-
-
 }
 
 @Composable
-fun Boton(etiqueta: String, alPulsar: () -> Unit = {}){
-    Button(onClick = alPulsar, modifier = Modifier
-        .padding(16.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = color_boton),
-        fontSize = 80.sp) {
-
-        Text(
-            etiqueta, modifier = Modifier
-                .background( color = Color.Transparent),
-            textAlign = TextAlign.Center,
-            color = Color.White
-        )
+fun Boton(etiqueta: String, modifier: Modifier = Modifier, alPulsar: () -> Unit = {}) {
+    Button(onClick = { alPulsar() }, modifier = modifier.clip(CircleShape)) {
+        Text(text = etiqueta, fontSize = 45.sp, textAlign = TextAlign.Center, color = Color.White)
     }
 }
+
 
 /* NOTAS
     px:Píxeles: corresponde a los píxeles reales en la pantalla
