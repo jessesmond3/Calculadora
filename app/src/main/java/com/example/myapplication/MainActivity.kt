@@ -59,15 +59,15 @@ var hileras_de_botones_a_dibujar = listOf(
     ),
     listOf(
         BotonModelo("boton_+", "+", OperacionesAritmeticas.Suma, "+"),
-        BotonModelo("boton_-", "0", OperacionesAritmeticas.Resta, "*"),
-        BotonModelo("boton_=", "-", OperacionesAritmeticas.Multiplicacion, "-")
+        BotonModelo("boton_0", "0", OperacionesAritmeticas.Resta, "*"),
+        BotonModelo("boton_-", "-", OperacionesAritmeticas.Multiplicacion, "-")
     ),
     listOf(
-        BotonModelo("boton_+", "/", OperacionesAritmeticas.Division, "+"),
-        BotonModelo("boton_=", "*", OperacionesAritmeticas.Resultado, "=")
+        BotonModelo("boton_/", "/", OperacionesAritmeticas.Division, "+"),
+        BotonModelo("boton_*", "*", OperacionesAritmeticas.Resultado, "=")
     ),
     listOf(
-        BotonModelo("boton_+", "C", OperacionesAritmeticas.Division, "+"),
+        BotonModelo("boton_C", "C",),
         BotonModelo("boton_=", "=", OperacionesAritmeticas.Resultado, "=")
     )
 )
@@ -107,29 +107,34 @@ fun Calculadora() {
     fun pulsar_boton(boton: BotonModelo) {
         Log.v("BOTONES_INTERFAZ", "Se ha pulsado el boton ${boton.id}")
 
-        when (estado_de_la_calculadora.value) {
-            EstadosCalculadora.CuandoEstaEnCero -> {
-                pantalla_calculadora.value = if (boton.id == "boton_0") "0" else boton.numero
+        when {
+            boton.numero == "C" -> { // Limpiar pantalla
+                pantalla_calculadora.value = "0"
+                numero_anterior.value = "0"
+                operacion_seleccionada.value = OperacionesAritmeticas.Ninguna
+                estado_de_la_calculadora.value = EstadosCalculadora.CuandoEstaEnCero
+            }
+
+            estado_de_la_calculadora.value == EstadosCalculadora.CuandoEstaEnCero -> {
+                pantalla_calculadora.value = boton.numero
                 estado_de_la_calculadora.value = EstadosCalculadora.AgregandoNumeros
             }
 
-            EstadosCalculadora.AgregandoNumeros -> {
+            estado_de_la_calculadora.value == EstadosCalculadora.AgregandoNumeros -> {
                 pantalla_calculadora.value += boton.numero
             }
 
-            EstadosCalculadora.SeleccionadoOperacion -> {
-                if (boton.operacion_aritmetica != OperacionesAritmeticas.Ninguna &&
-                    boton.operacion_aritmetica != OperacionesAritmeticas.Resultado
-                ) {
-                    operacion_seleccionada.value = boton.operacion_aritmetica
-                    numero_anterior.value = pantalla_calculadora.value
-                    pantalla_calculadora.value = "0"
-                }
+            boton.operacion_aritmetica != OperacionesAritmeticas.Ninguna &&
+                    boton.operacion_aritmetica != OperacionesAritmeticas.Resultado -> {
+                operacion_seleccionada.value = boton.operacion_aritmetica
+                numero_anterior.value = pantalla_calculadora.value
+                pantalla_calculadora.value = "0"
+                estado_de_la_calculadora.value = EstadosCalculadora.SeleccionadoOperacion
             }
 
-            EstadosCalculadora.MostrandoResultado -> {
-                pantalla_calculadora.value = "0"
-                estado_de_la_calculadora.value = EstadosCalculadora.CuandoEstaEnCero
+            boton.operacion_aritmetica == OperacionesAritmeticas.Resultado -> {
+                pantalla_calculadora.value = realizarOperacion()
+                estado_de_la_calculadora.value = EstadosCalculadora.MostrandoResultado
             }
         }
     }
